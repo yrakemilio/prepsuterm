@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SUTERM 2026 | Demo 3.1 - Nacional y Local Independientes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.development.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.development.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+    <style>
+        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { opacity: 0.5; }
+        .discrep-row { background-color: #fee2e2 !important; border-left: 4px solid #dc2626; }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+
+<div id="root"></div>
+
+<script type="text/babel">
+    // ---------- CONFIGURACIÓN INICIAL ----------
+    const SECCIONES = {
+        "9": { nombre: "Sección 9", padron: 150 },
+        "11": { nombre: "Sección 11", padron: 164 },
+        "35": { nombre: "Sección 35", padron: 93 },
+        "1": { nombre: "Sección 1", padron: 355 },
+        "2": { nombre: "Sección 2", padron: 251 },
+        "7": { nombre: "Sección 7", padron: 389 }
+    };
+
+    // ========== DATOS NACIONALES (Planillas: Azul, Roja, Otros) ==========
+    const RESULTADOS_NACIONALES = {
+        "9": { azul: 39, roja: 33, otros: 46, nulos: 32 },
+        "11": { azul: 97, roja: 33, otros: 21, nulos: 13 },
+        "35": { azul: 49, roja: 34, otros: 8, nulos: 2 },
+        "1": { azul: 180, roja: 200, otros: 50, nulos: 12 },  // Gana Roja
+        "2": { azul: 122, roja: 51, otros: 30, nulos: 48 },
+        "7": { azul: 48, roja: 62, otros: 111, nulos: 48 }
+    };
+
+    // ========== DATOS LOCALES (Planillas: Azul, Roja, Amarilla, Otros) ==========
+    const RESULTADOS_LOCALES = {
+        "9": { azul: 55, roja: 40, amarilla: 30, otros: 15, nulos: 10 },
+        "11": { azul: 80, roja: 45, amarilla: 20, otros: 10, nulos: 9 },
+        "35": { azul: 30, roja: 25, amarilla: 20, otros: 8, nulos: 10 },
+        "1": { azul: 100, roja: 80, amarilla: 150, otros: 20, nulos: 5 },  // Gana Amarilla
+        "2": { azul: 90, roja: 60, amarilla: 40, otros: 30, nulos: 31 },
+        "7": { azul: 70, roja: 55, amarilla: 180, otros: 40, nulos: 44 }   // Gana Amarilla
+    };
+
+    // Claves de acceso
+    const CLAVES_ACCESO = {
+        "CAEL_NAC_9": { pass: "suterm9", perfil: "cael", tipo: "nacional", seccion: "9" },
+        "AZUL_NAC_9": { pass: "suterm9", perfil: "planilla", planilla: "azul", tipo: "nacional", seccion: "9" },
+        "ROJA_NAC_9": { pass: "suterm9", perfil: "planilla", planilla: "roja", tipo: "nacional", seccion: "9" },
+        "OBS_NAC_9": { pass: "suterm9", perfil: "observador", tipo: "nacional", seccion: "9" },
+        "CAEL_NAC_1": { pass: "suterm1", perfil: "cael", tipo: "nacional", seccion: "1" },
+        "AZUL_NAC_1": { pass: "suterm1", perfil: "planilla", planilla: "azul", tipo: "nacional", seccion: "1" },
+        "ROJA_NAC_1": { pass: "suterm1", perfil: "planilla", planilla: "roja", tipo: "nacional", seccion: "1" },
+        "CAEL_LOC_35": { pass: "local35", perfil: "cael", tipo: "local", seccion: "35" },
+        "AZUL_LOC_35": { pass: "local35", perfil: "planilla", planilla: "azul", tipo: "local", seccion: "35" },
+        "ROJA_LOC_35": { pass: "local35", perfil: "planilla", planilla: "roja", tipo: "local", seccion: "35" },
+        "AMARILLA_LOC_35": { pass: "local35", perfil: "planilla", planilla: "amarilla", tipo: "local", seccion: "35" },
+        "OBS_LOC_35": { pass: "local35", perfil: "observador", tipo: "local", seccion: "35" }
+    };
+
+    const generarFotoActa = (seccion, tipo) => `https://picsum.photos/id/${(parseInt(seccion) * 7 + tipo.length) % 100}/400/300?grayscale&seed=${tipo}_${seccion}`;
+
+    const construirEstadoInicial = () => {
+        let estado = { nacional: {}, local: {} };
+        for (let sec in SECCIONES) {
+            // Nacional: siempre tiene azul, roja, otros
+            estado.nacional[sec] = {
+                cael: { ...RESULTADOS_NACIONALES[sec], foto: generarFotoActa(sec, "nacional") },
+                planillas: {
+                    azul: { ...RESULTADOS_NACIONALES[sec], foto: generarFotoActa(sec, "nacional") },
+                    roja: { ...RESULTADOS_NACIONALES[sec], foto: generarFotoActa(sec, "nacional") }
+                },
+                observador: { ...RESULTADOS_NACIONALES[sec], foto: generarFotoActa(sec, "nacional") }
+            };
+            // Local: tiene azul, roja, amarilla, otros
+            estado.local[sec] = {
+                cael: { ...RESULTADOS_LOCALES[sec], foto: generarFotoActa(sec, "local") },
+                planillas: {
+                    azul: { ...RESULTADOS_LOCALES[sec], foto: generarFotoActa(sec, "local") },
+                    roja: { ...RESULTADOS_LOCALES[sec], foto: generarFotoActa(sec, "local") },
+                    amarilla: { ...RESULTADOS_LOCALES[sec], foto: generarFotoActa(sec, "local") }
+                },
+                observador: { ...RESULTADOS_LOCALES[sec], foto: generarFotoActa(sec, "local") }
+            };
+        }
+        // DISCREPANCIAS INTENCIONALES (evidentes para la demo)
+        estado.nacional["9"].planillas.azul.azul = 100;   // Azul reporta 100 (real 39) ¡DISCREPANCIA!
+        estado.nacional["35"].cael.otros = 20;            // CAEL reporta 20 otros (real 8)
+        estado.local["1"].planillas.amarilla.amarilla = 200; // Amarilla reporta 200 (real 150)
+        estado.local["7"].observador.roja = 80;            // Observador reporta 80 rojos (real 55)
+        return estado;
+    };
+
+    const obtenerFilasAuditoriaNacional = (data, secciones) => {
+        let filas = [];
+        for (let sec in secciones) {
+            const secData = data.nacional[sec];
+            const padron = secciones[sec].padron;
+            const cael = secData.cael;
+            const azul = secData.planillas.azul;
+            const roja = secData.planillas.roja;
+            const obs = secData.observador;
+            const hayDiscrep = (cael.azul !== azul.azul || cael.azul !== roja.azul ||
+                                cael.roja !== azul.roja || cael.roja !== roja.roja ||
+                                cael.otros !== azul.otros || cael.otros !== roja.otros ||
+                                cael.nulos !== azul.nulos || cael.nulos !== roja.nulos);
+            filas.push({ sec, nombre: secciones[sec].nombre, padron, cael, azul, roja, obs, hayDiscrep });
+        }
+        return filas;
+    };
+
+    const obtenerFilasAuditoriaLocal = (data, secciones) => {
+        let filas = [];
+        for (let sec in secciones) {
+            const secData = data.local[sec];
+            const padron = secciones[sec].padron;
+            const cael = secData.cael;
+            const azul = secData.planillas.azul;
+            const roja = secData.planillas.roja;
+            const amarilla = secData.planillas.amarilla;
+            const obs = secData.observador;
+            const hayDiscrep = (cael.azul !== azul.azul || cael.azul !== roja.azul || cael.azul !== amarilla.azul ||
+                                cael.roja !== azul.roja || cael.roja !== roja.roja || cael.roja !== amarilla.roja ||
+                                cael.amarilla !== azul.amarilla || cael.amarilla !== roja.amarilla || cael.amarilla !== amarilla.amarilla ||
+                                cael.otros !== azul.otros || cael.otros !== roja.otros || cael.otros !== amarilla.otros ||
+                                cael.nulos !== azul.nulos || cael.nulos !== roja.nulos || cael.nulos !== amarilla.nulos);
+            filas.push({ sec, nombre: secciones[sec].nombre, padron, cael, azul, roja, amarilla, obs, hayDiscrep });
+        }
+        return filas;
+    };
+
+    const App = () => {
+        const [pestania, setPestania] = React.useState("acceso");
+        const [sesion, setSesion] = React.useState(null);
+        const [errorLogin, setErrorLogin] = React.useState("");
+        const [data, setData] = React.useState(construirEstadoInicial());
+        const [formVotos, setFormVotos] = React.useState({});
+        const [fotoPreview, setFotoPreview] = React.useState(null);
+        const [errorForm, setErrorForm] = React.useState("");
+        const [exitoMsg, setExitoMsg] = React.useState("");
+        const [busquedaLocal, setBusquedaLocal] = React.useState("");
+
+        const handleLogin = (e) => {
+            e.preventDefault();
+            const usuario = e.target.usuario.value;
+            const pass = e.target.password.value;
+            const clave = CLAVES_ACCESO[usuario];
+            if (clave && clave.pass === pass) {
+                setSesion({ usuario, ...clave });
+                setErrorLogin("");
+                setPestania("captura");
+            } else {
+                setErrorLogin("Claves de acceso incorrectas.");
+            }
+        };
+
+        const cerrarSesion = () => {
+            setSesion(null);
+            setPestania("acceso");
+        };
+
+        const padronActual = sesion ? SECCIONES[sesion.seccion]?.padron : 0;
+
+        React.useEffect(() => {
+            if (sesion) {
+                let datosActuales = null;
+                if (sesion.perfil === "cael") {
+                    datosActuales = data[sesion.tipo][sesion.seccion].cael;
+                } else if (sesion.perfil === "planilla") {
+                    datosActuales = data[sesion.tipo][sesion.seccion].planillas[sesion.planilla];
+                } else if (sesion.perfil === "observador") {
+                    datosActuales = data[sesion.tipo][sesion.seccion].observador;
+                }
+                if (datosActuales) {
+                    setFormVotos(datosActuales);
+                    setFotoPreview(datosActuales.foto);
+                }
+            }
+        }, [sesion, data]);
+
+        const handleCambioVoto = (campo, valor) => {
+            const num = parseInt(valor) || 0;
+            const nuevo = { ...formVotos, [campo]: num };
+            const suma = (nuevo.azul||0) + (nuevo.roja||0) + (nuevo.amarilla||0) + (nuevo.otros||0) + (nuevo.nulos||0);
+            if (suma > padronActual) setErrorForm(`La suma (${suma}) excede el padrón (${padronActual})`);
+            else setErrorForm("");
+            setFormVotos(nuevo);
+        };
+
+        const handleSubirFoto = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onloadend = () => setFotoPreview(reader.result);
+                reader.readAsDataURL(file);
+            }
+        };
+
+        const guardarCaptura = () => {
+            const suma = (formVotos.azul||0) + (formVotos.roja||0) + (formVotos.amarilla||0) + (formVotos.otros||0) + (formVotos.nulos||0);
+            if (suma > padronActual) return setErrorForm("Corrija la suma");
+            setData(prev => {
+                const nuevo = { ...prev };
+                const target = nuevo[sesion.tipo][sesion.seccion];
+                const fotoFinal = fotoPreview || generarFotoActa(sesion.seccion, sesion.tipo);
+                if (sesion.perfil === "cael") target.cael = { ...formVotos, foto: fotoFinal };
+                else if (sesion.perfil === "planilla") target.planillas[sesion.planilla] = { ...formVotos, foto: fotoFinal };
+                else if (sesion.perfil === "observador") target.observador = { ...formVotos, foto: fotoFinal };
+                return nuevo;
+            });
+            setExitoMsg("Datos guardados");
+            setTimeout(() => setExitoMsg(""), 2000);
+        };
+
+        const auditoriaNacional = obtenerFilasAuditoriaNacional(data, SECCIONES);
+        const auditoriaLocal = obtenerFilasAuditoriaLocal(data, SECCIONES);
+
+        const totalNacional = auditoriaNacional.reduce((acc, row) => {
+            acc.azul += row.cael.azul;
+            acc.roja += row.cael.roja;
+            acc.otros += row.cael.otros;
+            acc.nulos += row.cael.nulos;
+            acc.padron += row.padron;
+            return acc;
+        }, { azul: 0, roja: 0, otros: 0, nulos: 0, padron: 0 });
+        const ganadorNacional = (() => {
+            const { azul, roja, otros } = totalNacional;
+            if (azul > roja && azul > otros) return "Planilla AZUL";
+            if (roja > azul && roja > otros) return "Planilla ROJA";
+            if (otros > azul && otros > roja) return "OTROS";
+            return "Empate";
+        })();
+
+        const seccionLocal = auditoriaLocal.find(r => r.sec === busquedaLocal);
+
+        const renderAcceso = () => (
+            <div className="max-w-md mx-auto mt-16 bg-white rounded-2xl shadow-xl border-t-8 border-red-700">
+                <div className="bg-gray-900 p-5 text-center">
+                    <h1 className="text-3xl font-bold text-white">SUTERM</h1>
+                    <p className="text-red-400">Resultados Preliminares 2026</p>
+                    <p className="text-gray-500 text-xs">Acceso con sus claves (contenidas en el sobre)</p>
+                </div>
+                <form onSubmit={handleLogin} className="p-7">
+                    <label className="font-semibold">Usuario</label>
+                    <input type="text" name="usuario" className="w-full border rounded p-2 mt-1 mb-4" required />
+                    <label className="font-semibold">Contraseña</label>
+                    <input type="password" name="password" className="w-full border rounded p-2 mt-1 mb-4" required />
+                    {errorLogin && <div className="text-red-600 text-sm mb-4 bg-red-50 p-2 rounded">{errorLogin}</div>}
+                    <button type="submit" className="w-full bg-red-800 text-white py-2 rounded hover:bg-red-900">Ingresar</button>
+                    <div className="mt-6 text-xs text-gray-500 bg-gray-50 p-3 rounded">
+                        <p className="font-bold">🔑 Claves de ejemplo:</p>
+                        <ul className="list-disc pl-4 mt-1">
+                            <li><strong>CAEL_NAC_9</strong> / suterm9 → Comisión Nacional Sección 9</li>
+                            <li><strong>AZUL_NAC_1</strong> / suterm1 → Planilla Azul Nacional Sección 1</li>
+                            <li><strong>AMARILLA_LOC_35</strong> / local35 → Planilla Amarilla Local Sección 35</li>
+                            <li><strong>OBS_LOC_35</strong> / local35 → Observador Local Sección 35</li>
+                        </ul>
+                    </div>
+                </form>
+            </div>
+        );
+
+        const renderCaptura = () => {
+            if (!sesion) return null;
+            const esNacional = sesion.tipo === "nacional";
+            return (
+                <div className="bg-white rounded-xl shadow-lg p-6">
+                    <div className="flex justify-between border-b pb-2 mb-4">
+                        <h2 className="text-xl font-bold">📋 Captura - {esNacional ? "Elección NACIONAL" : "Elección LOCAL"} - Sección {sesion.seccion}</h2>
+                        <button onClick={cerrarSesion} className="bg-gray-200 px-3 py-1 rounded">Cerrar sesión</button>
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <p><strong>Perfil:</strong> {sesion.perfil} {sesion.planilla && `(${sesion.planilla})`} | <strong>Padrón:</strong> {padronActual}</p>
+                            <div className="mt-4 space-y-3">
+                                {esNacional ? (
+                                    <>
+                                        <div><label>Votos Planilla AZUL</label><input type="number" value={formVotos.azul || 0} onChange={e => handleCambioVoto("azul", e.target.value)} className="w-full border p-2 rounded" /></div>
+                                        <div><label>Votos Planilla ROJA</label><input type="number" value={formVotos.roja || 0} onChange={e => handleCambioVoto("roja", e.target.value)} className="w-full border p-2 rounded" /></div>
+                                        <div><label>Otros Candidatos</label><input type="number" value={formVotos.otros || 0} onChange={e => handleCambioVoto("otros", e.target.value)} className="w-full border p-2 rounded" /></div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div><label>Votos Planilla AZUL</label><input type="number" value={formVotos.azul || 0} onChange={e => handleCambioVoto("azul", e.target.value)} className="w-full border p-2 rounded" /></div>
+                                        <div><label>Votos Planilla ROJA</label><input type="number" value={formVotos.roja || 0} onChange={e => handleCambioVoto("roja", e.target.value)} className="w-full border p-2 rounded" /></div>
+                                        <div><label>Votos Planilla AMARILLA</label><input type="number" value={formVotos.amarilla || 0} onChange={e => handleCambioVoto("amarilla", e.target.value)} className="w-full border p-2 rounded" /></div>
+                                        <div><label>Otros Candidatos</label><input type="number" value={formVotos.otros || 0} onChange={e => handleCambioVoto("otros", e.target.value)} className="w-full border p-2 rounded" /></div>
+                                    </>
+                                )}
+                                <div><label>Votos Nulos</label><input type="number" value={formVotos.nulos || 0} onChange={e => handleCambioVoto("nulos", e.target.value)} className="w-full border p-2 rounded" /></div>
+                                {errorForm && <div className="text-red-700 bg-red-50 p-2 rounded">{errorForm}</div>}
+                                {exitoMsg && <div className="text-green-700 bg-green-50 p-2 rounded">{exitoMsg}</div>}
+                                <button onClick={guardarCaptura} className="bg-red-700 text-white px-4 py-2 rounded w-full">Guardar</button>
+                            </div>
+                        </div>
+                        <div className="border-l pl-5">
+                            <label className="font-semibold">📸 Evidencia (Acta de Escrutinio)</label>
+                            <input type="file" accept="image/*" onChange={handleSubirFoto} className="my-2" />
+                            {fotoPreview && <img src={fotoPreview} className="mt-2 w-full h-36 object-cover rounded border" alt="Acta" />}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const renderAuditoria = () => (
+            <div className="bg-white rounded-xl shadow-lg p-5 overflow-x-auto">
+                <h2 className="text-2xl font-bold mb-4">🔍 Auditoría: Triple validación</h2>
+                <div className="mb-8">
+                    <h3 className="font-bold text-lg bg-gray-100 p-2 mb-3">🗳️ Elección NACIONAL (Planillas: Azul, Roja)</h3>
+                    <table className="min-w-[1000px] w-full text-sm border">
+                        <thead className="bg-gray-800 text-white"><tr><th>Sección</th><th>Actor</th><th>Azul</th><th>Roja</th><th>Otros</th><th>Nulos</th><th>Acta</th><th>Estado</th></tr></thead>
+                        <tbody>{auditoriaNacional.map(row => {
+                            const actores = [
+                                { nombre: "CAEL", data: row.cael }, { nombre: "Planilla AZUL", data: row.azul },
+                                { nombre: "Planilla ROJA", data: row.roja }, { nombre: "Observador", data: row.obs }
+                            ];
+                            return actores.map((actor, idx) => (
+                                <tr key={`${row.sec}-${idx}`} className={row.hayDiscrep && idx===0 ? "discrep-row" : ""}>
+                                    {idx===0 && <td rowSpan={4} className="border p-2 align-middle font-bold">{row.nombre}<br/>(Padrón: {row.padron})</td>}
+                                    <td className="border p-2">{actor.nombre}</td>
+                                    <td className="border p-2 text-center">{actor.data.azul}</td>
+                                    <td className="border p-2 text-center">{actor.data.roja}</td>
+                                    <td className="border p-2 text-center">{actor.data.otros}</td>
+                                    <td className="border p-2 text-center">{actor.data.nulos}</td>
+                                    <td className="border p-2 text-center"><button onClick={()=>window.open(actor.data.foto,'_blank')} className="text-blue-600 underline">Ver</button></td>
+                                    <td className="border p-2 text-center">{idx===0 && row.hayDiscrep && <span className="text-red-700">⚠️ Discrepancia</span>}</td>
+                                </tr>
+                            ));
+                        })}</tbody>
+                    </table>
+                </div>
+                <div>
+                    <h3 className="font-bold text-lg bg-gray-100 p-2 mb-3">🏘️ Elección LOCAL (Planillas: Azul, Roja, Amarilla)</h3>
+                    <table className="min-w-[1200px] w-full text-sm border">
+                        <thead className="bg-gray-800 text-white"><tr><th>Sección</th><th>Actor</th><th>Azul</th><th>Roja</th><th>Amarilla</th><th>Otros</th><th>Nulos</th><th>Acta</th><th>Estado</th></tr></thead>
+                        <tbody>{auditoriaLocal.map(row => {
+                            const actores = [
+                                { nombre: "CAEL", data: row.cael }, { nombre: "Planilla AZUL", data: row.azul },
+                                { nombre: "Planilla ROJA", data: row.roja }, { nombre: "Planilla AMARILLA", data: row.amarilla },
+                                { nombre: "Observador", data: row.obs }
+                            ];
+                            return actores.map((actor, idx) => (
+                                <tr key={`${row.sec}-${idx}`} className={row.hayDiscrep && idx===0 ? "discrep-row" : ""}>
+                                    {idx===0 && <td rowSpan={5} className="border p-2 align-middle font-bold">{row.nombre}<br/>(Padrón: {row.padron})</td>}
+                                    <td className="border p-2">{actor.nombre}</td>
+                                    <td className="border p-2 text-center">{actor.data.azul}</td>
+                                    <td className="border p-2 text-center">{actor.data.roja}</td>
+                                    <td className="border p-2 text-center">{actor.data.amarilla}</td>
+                                    <td className="border p-2 text-center">{actor.data.otros}</td>
+                                    <td className="border p-2 text-center">{actor.data.nulos}</td>
+                                    <td className="border p-2 text-center"><button onClick={()=>window.open(actor.data.foto,'_blank')} className="text-blue-600 underline">Ver</button></td>
+                                    <td className="border p-2 text-center">{idx===0 && row.hayDiscrep && <span className="text-red-700">⚠️ Discrepancia</span>}</td>
+                                </tr>
+                            ));
+                        })}</tbody>
+                    </table>
+                </div>
+            </div>
+        );
+
+        const renderResultados = () => (
+            <div className="space-y-6">
+                <div className="bg-white rounded-xl shadow-lg p-6">
+                    <h2 className="text-2xl font-bold border-l-8 border-red-700 pl-3">📊 Resultados NACIONALES</h2>
+                    <p className="mt-2"><strong>Ganador por mayoría relativa:</strong> {ganadorNacional}</p>
+                    <div className="grid md:grid-cols-2 gap-4 mt-4">
+                        <div>AZUL: {totalNacional.azul} votos<div className="bg-gray-200 rounded-full h-2 mt-1"><div className="bg-blue-700 h-2 rounded-full" style={{width: `${(totalNacional.azul/(totalNacional.azul+totalNacional.roja+totalNacional.otros+1))*100}%`}}></div></div></div>
+                        <div>ROJA: {totalNacional.roja} votos<div className="bg-gray-200 rounded-full h-2 mt-1"><div className="bg-red-700 h-2 rounded-full" style={{width: `${(totalNacional.roja/(totalNacional.azul+totalNacional.roja+totalNacional.otros+1))*100}%`}}></div></div></div>
+                        <div>OTROS: {totalNacional.otros} votos</div>
+                        <div>Participación: {((totalNacional.azul+totalNacional.roja+totalNacional.otros+totalNacional.nulos)/totalNacional.padron*100).toFixed(1)}%</div>
+                    </div>
+                </div>
+                <div className="bg-white rounded-xl shadow-lg p-6">
+                    <h3 className="font-bold text-lg">🔎 Resultados LOCALES por Sección</h3>
+                    <input type="text" placeholder="Número de sección (ej. 1, 9, 35, 7)" className="border p-2 rounded w-full mt-2" value={busquedaLocal} onChange={e => setBusquedaLocal(e.target.value)} />
+                    {seccionLocal ? (
+                        <div className="mt-4 p-4 bg-gray-50 rounded border">
+                            <p className="font-bold text-lg">Sección {seccionLocal.sec} - {seccionLocal.nombre}</p>
+                            <p>Padrón: {seccionLocal.padron} electores</p>
+                            <div className="grid grid-cols-2 gap-2 mt-2">
+                                <div>🔵 AZUL: {seccionLocal.cael.azul} votos</div>
+                                <div>🔴 ROJA: {seccionLocal.cael.roja} votos</div>
+                                <div>🟡 AMARILLA: {seccionLocal.cael.amarilla} votos</div>
+                                <div>⚪ OTROS: {seccionLocal.cael.otros} votos</div>
+                                <div>❌ NULOS: {seccionLocal.cael.nulos} votos</div>
+                            </div>
+                            <p className="mt-3 pt-2 border-t"><span className="font-bold">🏆 Ganador Local:</span> {(() => { let a=seccionLocal.cael.azul, r=seccionLocal.cael.roja, am=seccionLocal.cael.amarilla, o=seccionLocal.cael.otros; if(a>r && a>am && a>o) return "Planilla AZUL"; if(r>a && r>am && r>o) return "Planilla ROJA"; if(am>a && am>r && am>o) return "Planilla AMARILLA"; if(o>a && o>r && o>am) return "OTROS"; return "EMPATE"; })()}</p>
+                            <button onClick={() => window.open(seccionLocal.cael.foto, '_blank')} className="mt-3 text-blue-600 underline text-sm">📄 Ver acta</button>
+                        </div>
+                    ) : busquedaLocal && <p className="text-red-500 mt-2">Sección no encontrada</p>}
+                </div>
+            </div>
+        );
+
+        return (
+            <div>
+                <header className="bg-gray-900 text-white shadow-md sticky top-0 z-10">
+                    <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+                        <div className="flex items-center gap-2"><div className="bg-red-700 w-8 h-8 rounded-full flex items-center justify-center font-bold">S</div><span className="font-bold text-xl">SUTERM 2026</span><span className="bg-red-800 text-xs px-2 py-0.5 rounded">Triple Validación</span></div>
+                        <div className="flex gap-2 text-sm">
+                            <button onClick={() => setPestania("acceso")} className={`px-3 py-1 rounded ${pestania==="acceso"?"bg-red-700":"hover:bg-gray-800"}`}>🔐 Acceso</button>
+                            <button onClick={() => sesion ? setPestania("captura") : alert("Inicie sesión")} className={`px-3 py-1 rounded ${pestania==="captura"?"bg-red-700":"hover:bg-gray-800"}`}>📋 Capturar</button>
+                            <button onClick={() => setPestania("auditoria")} className={`px-3 py-1 rounded ${pestania==="auditoria"?"bg-red-700":"hover:bg-gray-800"}`}>🔎 Auditoría</button>
+                            <button onClick={() => setPestania("resultados")} className={`px-3 py-1 rounded ${pestania==="resultados"?"bg-red-700":"hover:bg-gray-800"}`}>📊 Resultados</button>
+                        </div>
+                        {sesion && <div className="text-xs bg-gray-800 px-2 py-1 rounded">👤 {sesion.perfil} - {sesion.tipo} - Sec {sesion.seccion}</div>}
+                    </div>
+                </header>
+                <main className="container mx-auto p-4 mt-4">
+                    {pestania === "acceso" && renderAcceso()}
+                    {pestania === "captura" && sesion && renderCaptura()}
+                    {pestania === "auditoria" && renderAuditoria()}
+                    {pestania === "resultados" && renderResultados()}
+                </main>
+            </div>
+        );
+    };
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
